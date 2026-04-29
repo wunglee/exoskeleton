@@ -20,8 +20,9 @@ services:
             - "3306:3306"
         volumes:
             - mysql:/var/lib/mysql/
-            # 注入初始化脚本
-            - ./mysql/ruoyi-vue-pro.sql:/docker-entrypoint-initdb.d/init.sql:ro
+            # 注入初始化脚本（按文件名字母顺序执行）
+            - ./mysql/ruoyi-vue-pro.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+            - ./mysql/exoskeleton-pay-member.sql:/docker-entrypoint-initdb.d/02-pay-member.sql:ro
         command:
             --default-authentication-plugin=mysql_native_password
             --character-set-server=utf8mb4

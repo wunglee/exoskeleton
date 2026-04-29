@@ -32,6 +32,12 @@
 | [07-payment.md](07-payment.md) | 支付集成：Stripe (国际信用卡) + Jeepay (支付宝/微信支付)、统一支付路由 |
 | [08-membership.md](08-membership.md) | 会员等级：多级订阅、功能门控、配额管理 |
 
+### 社区层
+
+| 文档 | 内容 |
+|------|------|
+| [11-community.md](11-community.md) | 社区层架构：论坛讨论、评论、关注、动态流、点赞；核心透传集成模式 |
+
 ### 管理与运维
 
 | 文档 | 内容 |
@@ -48,12 +54,12 @@
 │                        NSCA v1.0 架构全景                            │
 ├─────────────────────────────────────────────────────────────────────┤
 │  外骨骼平台层 (exoskeleton/)                                         │
-│  ┌─────────┬─────────┬─────────┬─────────┬─────────┬─────────┐    │
-│  │  认证    │  权限    │  计费    │  支付    │  会员    │  管理    │    │
-│  │  JWT+   │  ABAC   │  混合    │  多渠道  │  等级    │  后台    │    │
-│  │  OIDC   │  +RBAC  │  模式    │  路由    │  门控    │  API    │    │
-│  └────┬────┴────┬────┴────┬────┴────┬────┴────┬────┴────┬────┘    │
-│       └─────────┴─────────┴────┬────┴─────────┴─────────┘          │
+│  ┌─────────┬─────────┬─────────┬─────────┬─────────┬─────────┬─────────┐    │
+│  │  认证    │  权限    │  计费    │  支付    │  会员    │  社区    │  管理    │    │
+│  │  JWT+   │  ABAC   │  混合    │  多渠道  │  等级    │  论坛+   │  后台    │    │
+│  │  OIDC   │  +RBAC  │  模式    │  路由    │  门控    │  透传    │  API    │    │
+│  └────┬────┴────┬────┴────┬────┴────┬────┴────┬────┴────┬────┴────┬────┘    │
+│       └─────────┴─────────┴─────────┴────┬────┴─────────┴─────────┘          │
 │                                │                                     │
 │                    Spring Cloud Gateway                              │
 │                 (JWT校验 / 限流 / 路由 / 熔断)                        │
@@ -90,10 +96,13 @@
 
 | 架构文档 | 需求文档 |
 |---------|---------|
-| [03-auth.md](03-auth.md) | [../requirements/exoskeleton/01-users-auth.md](../requirements/exoskeleton/01-users-auth.md) |
-| [06-billing.md](06-billing.md) + [07-payment.md](07-payment.md) | [../requirements/exoskeleton/02-subscription-plans.md](../requirements/exoskeleton/02-subscription-plans.md) |
-| [03-community.md](../requirements/exoskeleton/03-community.md) (需求侧) | 社区层需求 |
-| [09-admin.md](09-admin.md) | [../requirements/exoskeleton/04-admin-console.md](../requirements/exoskeleton/04-admin-console.md) |
+| [03-auth.md](03-auth.md) | [../requirements/01-users-auth.md](../requirements/01-users-auth.md) |
+| [04-permissions.md](04-permissions.md) | [../requirements/01-users-auth.md](../requirements/01-users-auth.md)（权限部分） |
+| [06-billing.md](06-billing.md) + [07-payment.md](07-payment.md) | [../requirements/02-subscription-plans.md](../requirements/02-subscription-plans.md) |
+| [08-membership.md](08-membership.md) | [../requirements/02-subscription-plans.md](../requirements/02-subscription-plans.md)（会员等级部分） |
+| [11-community.md](11-community.md) | [../requirements/03-community.md](../requirements/03-community.md)（通用社区框架部分） |
+| [05-gateway-integration.md](05-gateway-integration.md) §5.7 | [../requirements/03-community.md](../requirements/03-community.md)（核心透传部分） |
+| [09-admin.md](09-admin.md) | [../requirements/04-admin-console.md](../requirements/04-admin-console.md) |
 
 ---
 
@@ -104,8 +113,9 @@
 2. [02-tech-stack.md](02-tech-stack.md) — 理解技术选型与能力匹配
 3. [05-gateway-integration.md](05-gateway-integration.md) — 理解网关集成协议（最核心的集成约定）
 4. [03-auth.md](03-auth.md) — 理解认证架构
+5. [11-community.md](11-community.md) — 理解社区层与核心透传的边界
 
 **按角色阅读**：
-- **平台工程师**：03-auth → 04-permissions → 06-billing → 07-payment → 09-admin → 10-deployment
-- **后端开发者**：01-overview → 02-tech-stack → 05-gateway-integration
-- **架构师**：01-overview → 02-tech-stack → 05-gateway-integration → 10-deployment
+- **平台工程师**：03-auth → 04-permissions → 06-billing → 07-payment → 11-community → 09-admin → 10-deployment
+- **后端开发者**：01-overview → 02-tech-stack → 05-gateway-integration → 11-community
+- **架构师**：01-overview → 02-tech-stack → 05-gateway-integration → 11-community → 10-deployment

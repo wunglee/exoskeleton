@@ -32,31 +32,19 @@
             <version>${revision}</version>
         </dependency>
 
-        <!-- 会员中心。默认注释，保证编译速度 -->
-<!--        <dependency>-->
-<!--            <groupId>cn.iocoder.cloud</groupId>-->
-<!--            <artifactId>yudao-module-member-server</artifactId>-->
-<!--            <version>${revision}</version>-->
-<!--        </dependency>-->
+        <!-- 会员中心 -->
+        <dependency>
+            <groupId>cn.iocoder.cloud</groupId>
+            <artifactId>yudao-module-member-server</artifactId>
+            <version>${revision}</version>
+        </dependency>
 
-        <!-- 数据报表。默认注释，保证编译速度 -->
-<!--        <dependency>-->
-<!--            <groupId>cn.iocoder.cloud</groupId>-->
-<!--            <artifactId>yudao-module-report-server</artifactId>-->
-<!--            <version>${revision}</version>-->
-<!--        </dependency>-->
-        <!-- 工作流。默认注释，保证编译速度 -->
-<!--        <dependency>-->
-<!--            <groupId>cn.iocoder.cloud</groupId>-->
-<!--            <artifactId>yudao-module-bpm-server</artifactId>-->
-<!--            <version>${revision}</version>-->
-<!--        </dependency>-->
-        <!-- 支付服务。默认注释，保证编译速度 -->
-<!--        <dependency>-->
-<!--            <groupId>cn.iocoder.cloud</groupId>-->
-<!--            <artifactId>yudao-module-pay-server</artifactId>-->
-<!--            <version>${revision}</version>-->
-<!--        </dependency>-->
+        <!-- 支付服务 -->
+        <dependency>
+            <groupId>cn.iocoder.cloud</groupId>
+            <artifactId>yudao-module-pay-server</artifactId>
+            <version>${revision}</version>
+        </dependency>
 
         <!-- 微信公众号模块。默认注释，保证编译速度 -->
 <!--        <dependency>-->

@@ -1,313 +1,204 @@
-## 09. 总控配置后台架构
+# 09. 总控配置后台架构
 
-### 09.1 设计原则
+> NSCA 外骨骼基于 yudao-module-system 的管理后台框架扩展。yudao 已提供用户/角色/菜单/部门/租户/字典/通知等完整管理功能及其管理 UI。NSCA 新增会员等级管理、专家认证、内容审核、计费管理和运营分析等业务管理功能。
 
-**操作可审计**：管理员所有操作记录完整审计日志，支持回滚与追责。
+## 9.1 设计原则
 
-**最小权限**：管理员按角色分配最小必要权限，超级管理员操作需二次确认。
+**基于 yudao 管理后台扩展**：yudao-module-system + yudao-ui-admin 已提供开箱即用的后台管理界面（Vue3 + Element Plus）。NSCA 在 yudao 后台框架中新增菜单页面，而非重建管理后台。
 
-**实时生效**：配置变更即时同步到各服务，无需重启，支持灰度发布。
+**操作可审计**：yudao 已集成操作日志（`@OperateLog` 注解 + `system_operate_log` 表）。NSCA 所有管理操作遵循 yudao 的操作日志规范。
 
-**多租户隔离**：企业版客户的自定义配置与平台全局配置隔离，互不影响。
+**最小权限**：复用 yudao 的角色-菜单-权限体系（`system_role` + `system_menu` + `@PreAuthorize`）。
 
-### 09.2 后台架构
+**实时生效**：配置变更写入 yudao Nacos 配置中心（微服务模式）或 Redis（单体模式），无需重启。
+
+**多租户隔离**：复用 yudao `TenantLineInnerInterceptor`，企业版客户的自定义配置与平台全局配置隔离。
+
+## 9.2 yudao 管理后台基座
+
+yudao 已提供以下管理功能，NSCA 直接复用：
+
+| yudao 管理功能 | 数据表 | 是否存在 UI | NSCA 策略 |
+|-------------|-------|-----------|----------|
+| **用户管理** | `system_users` | 是 (Vue3) | 复用，新增会员等级/专家认证字段 |
+| **角色管理** | `system_role` | 是 | 复用，新增 NSCA 业务角色 |
+| **菜单管理** | `system_menu` | 是 | 复用，新增 NSCA 菜单项 |
+| **部门管理** | `system_dept` | 是 | 直接复用 |
+| **租户管理** | `system_tenant` + `system_tenant_package` | 是 | 直接复用 |
+| **字典管理** | `system_dict_type` + `system_dict_data` | 是 | 复用，新增 NSCA 字典项 |
+| **通知管理** | `system_notify_template` + `system_notify_message` | 是 | 复用，新增 NSCA 通知模板 |
+| **操作日志** | `system_operate_log` | 是 | 直接复用 |
+| **文件管理** | yudao-module-infra 文件服务 | 是 | 直接复用 |
+| **代码生成** | yudao-module-infra 代码生成器 | 是 | 直接复用（加速 NSCA 模块开发） |
+| **定时任务** | yudao-module-infra XXL-JOB 集成 | 是 | 复用，新增 NSCA 定时任务 |
+
+## 9.3 后台架构
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    总控后台 (Admin Console)                       │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐ │
-│  │ 用户管理     │  │ 项目管理     │  │ 系统配置                 │ │
-│  │ - 用户列表   │  │ - 项目列表   │  │ - 全局开关               │ │
-│  │ - 权限调整   │  │ - 内容审核   │  │ - 费率设置               │ │
-│  │ - 账户冻结   │  │ - 强制下架   │  │ - 维护模式               │ │
-│  │ - 专家认证   │  │ - 资源统计   │  │ - 公告管理               │ │
-│  └──────┬──────┘  └──────┬──────┘  └────────────┬────────────┘ │
-│         │                │                      │              │
-│  ┌──────┴──────┐  ┌──────┴──────┐  ┌────────────┴────────────┐ │
-│  │ 计费管理     │  │ 审计日志     │  │ 运营分析                 │ │
-│  │ - 发票查看   │  │ - 操作追踪   │  │ - DAU/MAU               │ │
-│  │ - 退款处理   │  │ - 安全事件   │  │ - 转化漏斗               │ │
-│  │ - 优惠码     │  │ - 登录审计   │  │ - 收入报表               │ │
-│  │ - 对账      │  │ - 数据导出   │  │ - 领域热度               │ │
-│  └─────────────┘  └─────────────┘  └─────────────────────────┘ │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│                  NSCA 管理后台 (yudao-ui-admin 扩展)                    │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  yudao 原有管理页面（复用）            NSCA 新增管理页面                   │
+│  ┌────────────────────────┐    ┌────────────────────────────────┐   │
+│  │ 用户管理 (system_users) │    │ 会员等级管理                      │   │
+│  │ 角色管理 (system_role)  │    │ - member_level 管理 + 定价配置    │   │
+│  │ 菜单管理 (system_menu)  │    │ - 专家认证审核                    │   │
+│  │ 部门管理 (system_dept)  │    │ - 标签/徽章管理 (member_tag)      │   │
+│  │ 租户管理 (system_tenant)│    └────────────────────────────────┘   │
+│  │ 字典管理 (system_dict)  │                                        │
+│  │ 通知管理 (system_notify)│    ┌────────────────────────────────┐   │
+│  │ 文件管理 (infra)       │    │ 项目管理                         │   │
+│  │ 定时任务 (infra)       │    │ - 核心透传项目列表                │   │
+│  └────────────────────────┘    │ - 内容审核（举报队列）             │   │
+│                                │ - 模型包审核                      │   │
+│  ┌────────────────────────┐    └────────────────────────────────┘   │
+│  │ 操作日志 (复用)         │                                        │
+│  │ API 日志  (复用)        │    ┌────────────────────────────────┐   │
+│  └────────────────────────┘    │ 计费管理                         │   │
+│                                │ - 订阅订单查看                    │   │
+│                                │ - 发票管理                        │   │
+│                                │ - 退款处理                        │   │
+│                                │ - 优惠码管理 (新增表)              │   │
+│                                │ - 对账报告                        │   │
+│                                └────────────────────────────────┘   │
+│                                                                      │
+│  ┌────────────────────────┐    ┌────────────────────────────────┐   │
+│  │                        │    │ 运营分析                         │   │
+│  │                        │    │ - DAU/MAU 仪表盘                 │   │
+│  │                        │    │ - 转化漏斗                        │   │
+│  │                        │    │ - 收入报表 (MRR/ARR)             │   │
+│  │                        │    │ - 领域热度                        │   │
+│  └────────────────────────┘    └────────────────────────────────┘   │
+│                                                                      │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
-### 09.3 用户管理
+## 9.4 用户管理（扩展 yudao system_users）
 
-**用户列表**：
+yudao 已提供用户列表、角色分配、状态管理。NSCA 新增会员和认证管理功能。
+
+### 用户列表扩展字段
+
 ```yaml
-GET /admin/api/v1/users
+GET /admin/api/v1/users (在 yudao /system/user/page 基础上扩展)
 query:
-  search: string?           # 邮箱/昵称模糊搜索
-  tier: string?             # 等级筛选
+  search: string?           # 邮箱/昵称/手机号模糊搜索
+  levelId: int?             # member_level.id 筛选
   status: string?           # active | suspended | deleted
-  expert_status: string?    # none | contributor | expert | chief
+  expert_tag: string?       # 专家标签筛选
   registered_after: date?
-  registered_before: date?
   sort: string              # created_at | last_login | total_ticks
-  order: string             # asc | desc
-  page: int
-  per_page: int
 
 response:
   users:
-    - user_id: string
+    - user_id: long
+      nickname: string
       email: string
-      display_name: string
       avatar_url: string
-      tier: string
+      level_name: string     # 从 member_user.levelId → member_level.name
       status: string
-      expert_badges: string[]
+      honor_title: string    # 从 member_user.experience 计算荣誉级别
+      badges: string[]       # 从 member_user.tagIds → member_tag.name
       created_at: datetime
       last_login_at: datetime
-      total_projects: int
-      total_ticks: int
-      storage_used_gb: float
       mfa_enabled: boolean
 ```
 
-**用户操作**：
-| 操作 | 所需角色 | 二次确认 | 审计记录 |
-|------|----------|----------|----------|
-| 查看用户详情 | Admin+ | 否 | 是 |
-| 修改用户等级 | Admin+ | 是 | 是 |
-| 冻结账户 | Admin+ | 是 | 是 |
-| 删除账户 | SuperAdmin | 是（需理由） | 是 |
-| 授予专家认证 | Admin+ | 是 | 是 |
-| 撤销专家认证 | Admin+ | 是 | 是 |
-| 重置用户密码 | Admin+ | 是 | 是 |
-| 查看用户审计日志 | Admin+ | 否 | 是 |
+### 管理员操作权限
 
-### 09.4 项目管理
+| 操作 | 所需角色 | 二次确认 | yudao 操作日志 |
+|------|----------|----------|-------------|
+| 授予专家认证 | nsca_admin+ | 是 | @OperateLog 自动记录 |
+| 撤销专家认证 | nsca_admin+ | 是 | @OperateLog 自动记录 |
+| 修改用户等级 | nsca_admin+ | 是 | @OperateLog 自动记录 |
+| 冻结/解冻账户 | nsca_admin+ | 是 | 复用 yudao 用户状态管理 |
+| 删除账户 | nsca_super_admin | 是（需理由） | @OperateLog |
+| 查看用户审计日志 | nsca_admin+ | 否 | 仅查询 |
 
-**项目列表**：
+## 9.5 内容审核
+
+> yudao 无内容审核模块。NSCA 新增审核队列，通过 `system_menu` 新增菜单项接入。
+
 ```yaml
-GET /admin/api/v1/projects
-query:
-  search: string?
-  visibility: string?       # public | private | team
-  domain: string?           # 领域筛选
-  status: string?           # active | archived | flagged
-  is_template: boolean?
-  sort: string              # created_at | star_count | fork_count
-  page: int
-  per_page: int
-
-response:
-  projects:
-    - project_id: string
-      name: string
-      owner: UserSummary
-      visibility: string
-      domain: string
-      status: string
-      star_count: int
-      fork_count: int
-      total_ticks: int
-      created_at: datetime
-      last_active_at: datetime
-      is_flagged: boolean     # 被举报标记
-```
-
-**内容审核**：
-```yaml
-# 举报队列
+# 举报队列 (NSCA 新增)
 GET /admin/api/v1/reports
 response:
   reports:
     - report_id: string
-      type: string            # project | comment | user
+      type: string            # project | comment | user | forum_post
       target_id: string
-      reason: string          # spam | abuse | copyright | misinformation
+      reason: string
       reporter: UserSummary
       reported_at: datetime
       status: string          # pending | reviewing | resolved
+      auto_flagged: boolean   # 是否自动标记
 
-# 审核操作
+# 审核操作 (NSCA 新增)
 POST /admin/api/v1/reports/{id}/resolve
 request:
   action: string            # dismiss | hide | delete | warn_user | suspend_user
-  reason: string            # 处理理由
+  reason: string
   notify_reporter: boolean
 ```
 
-### 09.5 系统配置
+## 9.6 系统配置（扩展 yudao 配置体系）
 
-**全局开关**：
-```yaml
-GET /admin/api/v1/settings
+### 全局配置
 
-settings:
-  registration:
-    enabled: boolean          # 是否开放注册
-    require_invitation: boolean   # 是否需要邀请码
-    allowed_domains: string[]     # 允许注册的邮箱域名
+yudao 通过 Nacos Config / `application.yaml` 管理配置。NSCA 新增的业务配置通过 `system_config` 表管理（复用 yudao 的配置框架）：
 
-  simulation:
-    max_tick_per_run: int         # 单次仿真最大 tick
-    global_rate_limit: int        # 全局每秒最大仿真启动数
-    maintenance_mode: boolean     # 维护模式
-    maintenance_message: string
+| 配置分类 | NSCA 新增配置项 | 存储 |
+|---------|---------------|------|
+| registration | 是否开放注册、邮箱域名白名单 | system_config 表 |
+| simulation | 单次仿真最大 Tick、全局限流 | system_config 表 |
+| billing | 计划启用/禁用、定价、币种、税率 | member_level 表 + system_config |
+| community | 专家审核开关、举报自动标记阈值、推荐项目 | system_config 表 |
+| security | 管理员 MFA 强制、最大登录尝试次数、IP 白名单 | system_config 表 |
 
-  billing:
-    plans:
-      - plan_id: string
-        enabled: boolean
-        price_monthly: string
-        price_yearly: string
-    tax_enabled: boolean
-    default_currency: string
-
-  community:
-    require_expert_approval: boolean   # 发布模型包是否需要审核
-    auto_flag_threshold: int           # 举报数自动标记阈值
-    featured_projects: string[]        # 首页推荐项目 ID
-
-  security:
-    require_mfa_for_admin: boolean
-    max_login_attempts: int
-    session_timeout_hours: int
-    ip_whitelist: string[]            # 管理后台 IP 白名单
-```
-
-**配置变更流程**：
 ```
 管理员修改配置
     ↓
-保存草稿（可选）
+POST /admin/api/v1/settings → 写入 system_config 表
     ↓
-提交变更
+Nacos Config 广播变更（微服务模式）或 Redis Pub/Sub（单体模式）
     ↓
-影响分析（自动计算受影响的活跃用户）
+各服务监听 → 热更新
     ↓
-二次确认（影响 > 1000 用户需确认）
-    ↓
-写入配置中心（Consul / etcd）
-    ↓
-各服务监听变更，热更新
-    ↓
-记录审计日志
-    ↓
-发送变更通知（如维护公告）
+@OperateLog 记录审计日志
 ```
 
-### 09.6 计费管理
+## 9.7 计费管理
 
-**发票管理**：
+> yudao-module-pay 提供订单查询和退款接口。NSCA 新增优惠码管理、发票管理和收入报表。
+
 ```yaml
+# 优惠码管理 (NSCA 新增表 nsca_promo_code)
+POST /admin/api/v1/promo-codes
+request:
+  code: string              # "WELCOME2026"
+  discount_type: string     # percentage | fixed_amount
+  discount_value: string
+  applicable_plan_ids: long[]  # member_level.id 列表
+  max_uses: int
+  valid_from: datetime
+  valid_until: datetime
+  first_time_only: boolean
+
+# 发票管理 (NSCA 新增 billing_invoice 表)
 GET /admin/api/v1/invoices
 query:
-  status: string?           # open | paid | past_due | refunded
-  user_id: string?
+  status: string?
+  user_id: long?
   date_from: date?
   date_to: date?
 
-response:
-  invoices:
-    - invoice_id: string
-      user: UserSummary
-      amount: string
-      currency: string
-      status: string
-      created_at: datetime
-      due_date: datetime
-      paid_at: datetime?
-      stripe_invoice_id: string?
-```
-
-**退款处理**：
-```yaml
+# 退款处理 (复用 yudao PayRefundService + 新增审核流程)
 POST /admin/api/v1/invoices/{id}/refund
-request:
-  amount: string?           # 部分退款时指定
-  reason: string
-  processed_by: string      # 管理员 ID
-
-response:
-  refund_id: string
-  status: string
 ```
 
-**优惠码管理**：
-```yaml
-POST /admin/api/v1/promo-codes
-request:
-  code: string              # 如 "WELCOME2026"
-  description: string
-  discount_type: string     # percentage | fixed_amount
-  discount_value: string    # 20 或 10.00
-  applicable_plans: string[]
-  max_uses: int             # 总使用次数上限
-  max_uses_per_user: int    # 每用户使用次数
-  valid_from: datetime
-  valid_until: datetime
-  first_time_only: boolean  # 仅新用户
+## 9.8 运营分析
 
-GET /admin/api/v1/promo-codes
-response:
-  promo_codes:
-    - code: string
-      description: string
-      uses_count: int
-      max_uses: int
-      valid: boolean
-      created_at: datetime
-```
-
-### 09.7 审计日志
-
-**操作审计**：
-```yaml
-GET /admin/api/v1/audit-logs
-query:
-  actor_type: string?       # user | admin | system
-  actor_id: string?
-  action: string?           # login | logout | create | update | delete
-  resource_type: string?    # user | project | template | setting
-  resource_id: string?
-  date_from: datetime?
-  date_to: datetime?
-  page: int
-  per_page: int
-
-response:
-  logs:
-    - log_id: string
-      actor_type: string
-      actor_id: string
-      actor_email: string
-      action: string
-      resource_type: string
-      resource_id: string
-      resource_name: string
-      changes: object         # 变更前后对比
-      ip_address: string
-      user_agent: string
-      timestamp: datetime
-```
-
-**安全事件**：
-```yaml
-GET /admin/api/v1/security-events
-response:
-  events:
-    - event_id: string
-      type: string           # suspicious_login | token_reuse | brute_force | data_export
-      severity: string       # low | medium | high | critical
-      user_id: string?
-      description: string
-      metadata: object
-      detected_at: datetime
-      status: string         # open | investigating | resolved | false_positive
-```
-
-### 09.8 运营分析
-
-**仪表盘指标**：
 ```yaml
 GET /admin/api/v1/analytics/dashboard
 response:
@@ -318,79 +209,53 @@ response:
     ticks_consumed: int
     revenue_usd: string
     revenue_cny: string
-
   this_month:
     mau: int
     new_subscriptions: int
     churned_subscriptions: int
-    mrr_usd: string          # Monthly Recurring Revenue
-    arr_usd: string          # Annual Recurring Revenue
-
+    mrr_usd: string
+    arr_usd: string
   conversion:
-    visitor_to_signup: float     # 访客到注册转化率
+    visitor_to_signup: float
     signup_to_free_project: float
     free_to_pro: float
     pro_to_team: float
-
   top_domains:
     - domain: string
       project_count: int
       active_users: int
-      total_ticks: int
 ```
 
-**领域热度**：
-```yaml
-GET /admin/api/v1/analytics/domains
-response:
-  domains:
-    - name: string           # 社会心理学 | 金融市场 | 地缘政治
-      project_count: int
-      public_projects: int
-      total_ticks: int
-      active_researchers: int
-      trending_score: float   # 综合热度分
-```
+## 9.9 管理员角色（扩展 yudao system_role）
 
-### 09.9 管理员角色
+| 角色 | yudao role_code | 权限范围 |
+|------|----------------|---------|
+| **运营专员** | `nsca_operator` | 查看用户/项目列表、处理举报、查看分析报表、发送公告 |
+| **客服专员** | `nsca_support` | 查看用户详情、处理退款（限额内）、查看审计日志 |
+| **计费管理员** | `nsca_billing_admin` | 管理发票、处理退款、管理优惠码、查看收入报表 |
+| **平台管理员** | `nsca_admin` | 全部后台功能，但不能修改超级管理员权限 |
+| **超级管理员** | `nsca_super_admin` | 全部功能 + 修改管理员权限 + 系统冻结 + 数据导出 |
 
-| 角色 | 权限范围 |
-|------|----------|
-| **运营专员 (Operator)** | 查看用户/项目列表、处理举报、查看分析报表、发送公告 |
-| **客服专员 (Support)** | 查看用户详情、处理退款（限额内）、查看审计日志、重置用户密码 |
-| **计费管理员 (BillingAdmin)** | 管理发票、处理退款、管理优惠码、查看收入报表、修改定价 |
-| **平台管理员 (Admin)** | 全部后台功能，但不能修改超级管理员权限 |
-| **超级管理员 (SuperAdmin)** | 全部功能 + 修改管理员权限 + 紧急系统冻结 + 数据导出 |
+## 9.10 yudao 扩展映射
 
-### 09.10 接口契约
+| yudao 原有 | 方式 | NSCA 扩展 |
+|-----------|------|----------|
+| `system_users` 表 | 扩展（间接） | member_user 关联 + 会员等级/荣誉/徽章字段 |
+| `system_role` 表 | 新增记录 | nsca_operator, nsca_support, nsca_billing_admin, nsca_admin, nsca_super_admin |
+| `system_menu` 表 | 新增记录 | NSCA 管理菜单项（会员管理/内容审核/计费管理/运营分析） |
+| `system_dict` 表 | 新增字典项 | NSCA 业务字典（领域分类、举报类型、折扣类型等） |
+| `system_operate_log` 表 | 直接复用 | @OperateLog 注解自动记录 |
+| `system_notify` 表 | 新增模板 | NSCA 业务通知模板（订阅到期提醒、专家认证通知等） |
+| yudao-ui-admin | 新增页面 | Vue3 组件：会员等级管理、内容审核、优惠码管理、运营仪表盘 |
+| yudao-module-infra 文件服务 | 直接复用 | 用户头像、模型包文件 |
+| yudao-module-infra 代码生成 | 直接复用 | 加速 NSCA 新增表的 CRUD 代码生成 |
+| — | **新增表** | `nsca_promo_code`、`nsca_report`、`billing_invoice` |
+| — | **新增 Controller** | `NscaAdminController`（挂载在 yudao-module-system） |
 
-```yaml
-# 所有 /admin/api/v1/* 端点要求：
-# - 请求头: Authorization: Bearer <admin_jwt>
-# - 管理员 JWT 包含 scope: "admin" 或 "superadmin"
-# - 来源 IP 需在白名单内（如配置了白名单）
-# - 敏感操作需要 MFA（如配置了 require_mfa_for_admin）
+---
 
-# GET /admin/api/v1/me
-response_200:
-  admin_id: string
-  email: string
-  role: string
-  permissions: string[]
-  last_login_at: datetime
-  mfa_enabled: boolean
+## 参考
 
-# POST /admin/api/v1/settings
-request:
-  key: string
-  value: any
-  reason: string            # 变更理由，记录审计日志
-
-# GET /admin/api/v1/health
-response_200:
-  services:
-    - name: string
-      status: string        # healthy | degraded | down
-      latency_ms: int
-      last_checked: datetime
-```
+- [yudao 管理后台文档](https://doc.iocoder.cn/admin-ui/)
+- [yudao 操作日志文档](https://doc.iocoder.cn/operate-log/)
+- [yudao 代码生成器](https://doc.iocoder.cn/code-generator/)

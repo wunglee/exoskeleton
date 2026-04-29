@@ -67,16 +67,12 @@ knife4j:
   setting:
     language: zh_cn
 
-# 工作流 Flowable 配置
-flowable:
-  # 1. false: 默认值，Flowable 启动时，对比数据库表中保存的版本，如果不匹配。将抛出异常
-  # 2. true: 启动时会对数据库中所有表进行更新操作，如果表存在，不做处理，反之，自动创建表
-  # 3. create_drop: 启动时自动创建表，关闭时自动删除表
-  # 4. drop_create: 启动时，删除旧表，再创建新表
-  database-schema-update: true # 设置为 false，可通过 https://github.com/flowable/flowable-sql 初始化
-  db-history-used: true # flowable6 默认 true 生成信息表，无需手动设置
-  check-process-definitions: false # 设置为 false，禁用 /resources/processes 自动部署 BPMN XML 流程
-  history-level: audit # full：保存历史数据的最高级别，可保存全部流程相关细节，包括流程流转各节点参数
+# 工作流 Flowable 配置（NSCA 外骨骼不需要 BPM，已禁用）
+# flowable:
+#   database-schema-update: false
+#   db-history-used: true
+#   check-process-definitions: false
+#   history-level: audit
 
 # MyBatis Plus 的配置项
 mybatis-plus:
@@ -167,66 +163,18 @@ spring:
     listener:
       missing-topics-fatal: false # 消费监听接口监听的主题不存在时，默认会报错。所以通过设置为 false ，解决报错
 
---- #################### AI 相关配置 ####################
-
-spring:
-  ai:
-    vectorstore: # 向量存储
-      redis:
-        initialize-schema: true
-        index-name: knowledge_index # Redis 中向量索引的名称：用于存储和检索向量数据的索引标识符，所有相关的向量搜索操作都会基于这个索引进行
-        prefix: "knowledge_segment:" # Redis 中存储向量数据的键名前缀：这个前缀会添加到每个存储在 Redis 中的向量数据键名前，每个 document 都是一个 hash 结构
-      qdrant:
-        initialize-schema: true
-        collection-name: knowledge_segment # Qdrant 中向量集合的名称：用于存储向量数据的集合标识符，所有相关的向量操作都会在这个集合中进行
-        host: 127.0.0.1
-        port: 6334
-      milvus:
-        initialize-schema: true
-        database-name: default # Milvus 中数据库的名称
-        collection-name: knowledge_segment # Milvus 中集合的名称：用于存储向量数据的集合标识符，所有相关的向量操作都会在这个集合中进行
-        client:
-          host: 127.0.0.1
-          port: 19530
-    qianfan: # 文心一言
-      api-key: x0cuLZ7XsaTCU08vuJWO87Lg
-      secret-key: R9mYF9dl9KASgi5RUq0FQt3wRisSnOcK
-    zhipuai: # 智谱 AI
-      api-key: 32f84543e54eee31f8d56b2bd6020573.3vh9idLJZ2ZhxDEs
-    openai: # OpenAI 官方
-      api-key: sk-aN6nWn3fILjrgLFT0fC4Aa60B72e4253826c77B29dC94f17
-      base-url: https://api.gptsapi.net
-    azure: # OpenAI 微软
-      openai:
-        endpoint: https://eastusprejade.openai.azure.com
-    anthropic: # Anthropic Claude
-      api-key: sk-muubv7cXeLw0Etgs743f365cD5Ea44429946Fa7e672d8942
-    ollama:
-      base-url: http://127.0.0.1:11434
-      chat:
-        model: llama3
-    stabilityai:
-      api-key: sk-e53UqbboF8QJCscYvzJscJxJXoFcFg4iJjl1oqgE7baJETmx
-    dashscope: # 通义千问
-      api-key: sk-47aa124781be4bfb95244cc62f6xxxx
-    minimax: # Minimax：https://www.minimaxi.com/
-      api-key: xxxx
-    moonshot: # 月之暗面（KIMI）
-      api-key: sk-abc
-    deepseek: # DeepSeek
-      api-key: sk-e94db327cc7d457d99a8de8810fc6b12
-      chat:
-        options:
-          model: deepseek-chat
-    model:
-      rerank: false # 是否开启“通义千问”的 Rerank 模型，填写 dashscope 开启
-    mcp:
-      server:
-        enabled: false
-        name: yudao-mcp-server
-        version: 1.0.0
-        instructions: 一个 MCP 示例服务
-        sse-endpoint: /sse
+# --- #################### AI 相关配置（NSCA 外骨骼不需要 AI 模块，已禁用） ####################
+# spring:
+#   ai:
+#     vectorstore:
+#       redis:
+#         initialize-schema: true
+#         index-name: knowledge_index
+#         prefix: "knowledge_segment:"
+#     openai:
+#       api-key: ${OPENAI_API_KEY:}
+#       base-url: https://api.openai.com
+#     # 其他 AI 提供商配置...
       client:
         enabled: false
         name: mcp

@@ -145,43 +145,30 @@ logging:
     name: ${user.home}/logs/${spring.application.name}.log # 日志文件名，全路径
   level:
     # 配置自己写的 MyBatis Mapper 打印日志
-    cn.iocoder.yudao.module.bpm.dal.mysql: debug
+    # NSCA 外骨骼保留模块日志：system、infra、pay、member
+    cn.iocoder.yudao.module.system.dal.mysql: debug
+    cn.iocoder.yudao.module.system.dal.mysql.sms.SmsChannelMapper: INFO # 配置 SmsChannelMapper 的日志级别为 info
     cn.iocoder.yudao.module.infra.dal.mysql: debug
     cn.iocoder.yudao.module.infra.dal.mysql.logger.ApiErrorLogMapper: INFO # 配置 ApiErrorLogMapper 的日志级别为 info，避免和 GlobalExceptionHandler 重复打印
     cn.iocoder.yudao.module.infra.dal.mysql.job.JobLogMapper: INFO # 配置 JobLogMapper 的日志级别为 info
     cn.iocoder.yudao.module.infra.dal.mysql.file.FileConfigMapper: INFO # 配置 FileConfigMapper 的日志级别为 info
     cn.iocoder.yudao.module.pay.dal.mysql: debug
     cn.iocoder.yudao.module.pay.dal.mysql.notify.PayNotifyTaskMapper: INFO # 配置 PayNotifyTaskMapper 的日志级别为 info
-    cn.iocoder.yudao.module.system.dal.mysql: debug
-    cn.iocoder.yudao.module.system.dal.mysql.sms.SmsChannelMapper: INFO # 配置 SmsChannelMapper 的日志级别为 info
-    cn.iocoder.yudao.module.tool.dal.mysql: debug
     cn.iocoder.yudao.module.member.dal.mysql: debug
-    cn.iocoder.yudao.module.trade.dal.mysql: debug
-    cn.iocoder.yudao.module.promotion.dal.mysql: debug
-    cn.iocoder.yudao.module.statistics.dal.mysql: debug
-    cn.iocoder.yudao.module.crm.dal.mysql: debug
-    cn.iocoder.yudao.module.erp.dal.mysql: debug
-    cn.iocoder.yudao.module.iot.dal.mysql: debug
-    cn.iocoder.yudao.module.iot.dal.tdengine: DEBUG
-    cn.iocoder.yudao.module.ai.dal.mysql: debug
     org.springframework.context.support.PostProcessorRegistrationDelegate: ERROR # TODO 芋艿：先禁用，Spring Boot 3.X 存在部分错误的 WARN 提示
 
 debug: false
 
---- #################### 微信公众号、小程序相关配置 ####################
+--- #################### 微信小程序相关配置 ####################
+# NSCA 外骨骼已移除 MP 公众号模块，仅保留小程序社交登录
 wx:
-  mp: # 公众号配置（必填），参见 https://github.com/Wechat-Group/WxJava/blob/develop/spring-boot-starters/wx-java-mp-spring-boot-starter/README.md 文档
-#    app-id: wx041349c6f39b268b # 测试号（牛希尧提供的）
-#    secret: 5abee519483bc9f8cb37ce280e814bd0
-    app-id: wx5b23ba7a5589ecbb # 测试号（自己的）
-    secret: 2a7b3b20c537e52e74afd395eb85f61f
-#    app-id: wxa69ab825b163be19 # 测试号（Kongdy 提供的）
-#    secret: bd4f9fab889591b62aeac0d7b8d8b4a0
-    # 存储配置，解决 AccessToken 的跨节点的共享
-    config-storage:
-      type: RedisTemplate # 采用 RedisTemplate 操作 Redis，会自动从 Spring 中获取
-      key-prefix: wx # Redis Key 的前缀
-      http-client-type: HttpClient # 采用 HttpClient 请求微信公众号平台
+#  mp: # 公众号配置（NSCA 外骨骼已移除 MP 模块，如需公众号功能请恢复 yudao-module-mp）
+#    app-id: wx5b23ba7a5589ecbb
+#    secret: 2a7b3b20c537e52e74afd395eb85f61f
+#    config-storage:
+#      type: RedisTemplate
+#      key-prefix: wx
+#      http-client-type: HttpClient
   miniapp: # 小程序配置（必填），参见 https://github.com/Wechat-Group/WxJava/blob/develop/spring-boot-starters/wx-java-miniapp-spring-boot-starter/README.md 文档
     #    appid: wx62056c0d5e8db250 # 测试号（牛希尧提供的）
     #    secret: 333ae72f41552af1e998fe1f54e1584a
@@ -235,10 +222,11 @@ justauth:
       client-secret: ${wx.miniapp.secret}
       ignore-check-redirect-uri: true
       ignore-check-state: true # 微信小程序，不会使用到 state，所以不进行校验
-    WECHAT_MP: # 微信公众号
-      client-id: ${wx.mp.app-id}
-      client-secret: ${wx.mp.secret}
-      ignore-check-redirect-uri: true
+    # WECHAT_MP 已禁用：NSCA 外骨骼已移除 MP 公众号模块
+    # WECHAT_MP: # 微信公众号
+    #   client-id: ${wx.mp.app-id}
+    #   client-secret: ${wx.mp.secret}
+    #   ignore-check-redirect-uri: true
     ALIPAY: # 支付宝小程序
       client-id: xx
       client-secret: xx
@@ -250,7 +238,7 @@ justauth:
     prefix: 'social_auth_state:' # 缓存前缀，目前只对 Redis 缓存生效，默认 JUSTAUTH::STATE::
     timeout: 24h # 超时时长，目前只对 Redis 缓存生效，默认 3 分钟
 
---- #################### iot相关配置 TODO 芋艿【IOT】：再瞅瞅 ####################
-pf4j:
-#  pluginsDir: /tmp/
+# --- #################### iot相关配置（NSCA 外骨骼已移除 IoT 模块）####################
+# pf4j:
+#   pluginsDir: /tmp/
   pluginsDir: ../plugins
